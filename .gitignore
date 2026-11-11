@@ -3,4 +3,3 @@
 __pycache__/
 *.pyc
 eval_results*.json
-/WORK_LOG.md

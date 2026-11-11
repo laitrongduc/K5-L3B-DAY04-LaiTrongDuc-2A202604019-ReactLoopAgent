@@ -69,19 +69,19 @@ Tool result thực tế của A7:
 
 URL incident đã có trong tool result thành công, nhưng không xuất hiện trong final answer. Judge cũng ghi “thiếu nguồn cụ thể”. Nguyên nhân ở agent loop: baseline chấp nhận final ngay khi finish=stop và hết calls, không kiểm tra nguồn. Không khẳng định rằng các phần còn lại của câu trả lời đều đúng.
 
-Baseline `eval_before.json` được giữ nguyên, đủ 22 case; source tương ứng được lưu tại `artifacts/agent_before.py`, SHA256 `a82b30063cc8846acdd77b8b157dfcf47b8d379119d802adabd05ee9edd1f6ab`.
+Baseline `eval_before.json` được giữ nguyên, đủ 22 case. Source baseline có SHA256 `a82b30063cc8846acdd77b8b157dfcf47b8d379119d802adabd05ee9edd1f6ab`; bản sao source chỉ lưu riêng trên máy, không thuộc hồ sơ nộp.
 
 ## 3. Thay đổi đã thực hiện
 
 - Một thay đổi hành vi so với baseline: thêm validation URL nguồn trong `agent.py`. Giữ nguyên system prompt gốc và các xử lý lỗi đã hoàn thành ở Bài 2.
 - Lưu URL từ get_incident_details thành công. Khi final không chứa bất kỳ URL incident đã quan sát nào, ghi event validation_missing_source và yêu cầu model sửa trong max_steps. Nếu hết lượt mà chưa sửa thì trả max_steps; không bắt URL khi chưa có incident thành công.
 - Chọn thay đổi này vì giải quyết trực tiếp lỗi thiếu nguồn trong trace A7 và đúng ví dụ/contract ở Bài 4, tests/test_validation.py. Không hard-code câu trả lời hoặc ID incident.
-- Phần prompt mở rộng của lần thử trước đã được hoàn tác để phép so sánh chỉ có một thay đổi. Source, NOTES và eval_after cũ được lưu nguyên tại `artifacts/previous_attempt/`; không chỉnh tay kết quả eval.
+- Phần prompt mở rộng của lần thử trước đã được hoàn tác để phép so sánh chỉ có một thay đổi. Source, ghi chú và kết quả cũ được lưu riêng trên máy; không chỉnh tay kết quả eval.
 - Mục 1–3 được ghi trước lần eval sau cải tiến đã chỉnh phạm vi; kết quả thực tế đã được điền vào mục 4 sau khi chạy.
 
 ## 4. So sánh hai lần chạy
 
-Hai file cùng config: provider/judge `openrouter`, model agent/judge `GPT-4o-mini`, dataset `core`, max_steps=8; dùng snapshot gốc và workers mặc định 1. Baseline được giữ nguyên; chỉ eval_after được runner chạy lại sau khi thu hẹp thay đổi và ghi mục 1–3. Đây là lần sửa phạm vi thí nghiệm, không chọn kết quả cao nhất trong nhiều lần chạy. Kết quả lần thử trước (78,18) vẫn nguyên tại `artifacts/previous_attempt/eval_after.json`.
+Hai file cùng config: provider/judge `openrouter`, model agent/judge `GPT-4o-mini`, dataset `core`, max_steps=8; dùng snapshot gốc và workers mặc định 1. Baseline được giữ nguyên; chỉ eval_after được runner chạy lại sau khi thu hẹp thay đổi và ghi mục 1–3. Đây là lần sửa phạm vi thí nghiệm, không chọn kết quả cao nhất trong nhiều lần chạy. Kết quả lần thử trước (78,18) được lưu nguyên riêng trên máy, không trộn vào bộ so sánh được nộp.
 
 | Chỉ số | `eval_before.json` | `eval_after.json` |
 |---|---:|---:|
@@ -123,10 +123,10 @@ Chi phí từ usage của provider, không gồm E2 riêng, smoke tests hoặc l
 
 - Kết quả nguồn của case đã chọn: A7 trước không dẫn nguồn; sau có URL `https://www.cloudflarestatus.com/incidents/c60k3g4vsoc1`. Điểm A7 không đổi. Final answer sau được giữ trong eval_after.json, không sửa tay.
 - Số event validation_missing_source trong eval mới: 0. Model tự dẫn URL trong các case đã đọc incident thành công, nên chưa quan sát được gate sửa câu trả lời ở lần eval này. Hai unit tests kiểm tra yêu cầu sửa và hết budget đã pass; test incident thất bại không bắt URL cũng pass.
-- Source baseline chạy lại offline toàn bộ 37 tests: 35 pass, chỉ 2 tests validation nguồn fail, đúng checkpoint CP3. Source cuối: 37/37 tests pass. Source baseline và source cuối được lưu để đối chiếu tại artifacts/agent_before.py và artifacts/agent_after.py.
+- Source baseline chạy lại offline toàn bộ 37 tests: 35 pass, chỉ 2 tests validation nguồn fail, đúng checkpoint CP3. Source cuối: 37/37 tests pass. Các bản sao source được lưu riêng trên máy để đối chiếu; source cuối của hồ sơ nộp là agent.py.
 - Lỗi còn lại: E1 vẫn dùng từ hiện tại cho snapshot; H1/H6 vẫn bỏ qua incident gộp, đều bị cap 60 do chỉ một tool step. H7 lần này không bịa operational cho Cloudflare timeout nhưng vẫn gọi trạng thái GitHub từ snapshot là hiện tại; không kết luận lỗi này đã ổn định vì không có thay đổi kiểm soát timeout mới.
 - Suy giảm cần ghi nhận: A1 90 → 75, A6 80 → 70, H4 100 → 80. A5 tăng 55 → 60 nhưng vẫn thấp. H4 không gọi tool và vẫn được judge xác nhận làm đúng yêu cầu thơ, minh họa biến động/giới hạn judge; không quy mọi thay đổi điểm cho code.
-- Smoke tests bản cuối: cả snapshot và live đều completed, mỗi run 2 model calls/1 tool call. Snapshot vẫn kết luận hiện tại không đúng giới hạn dữ liệu; live vẫn kết luận không có cache purge dù chỉ lấy 5 incident chưa lọc. Giữ nguyên JSON trong artifacts/smoke_snapshot.json và artifacts/smoke_live.json để phân tích, không coi completed là câu trả lời đúng.
+- Smoke tests bản cuối: cả snapshot và live đều completed, mỗi run 2 model calls/1 tool call. Snapshot vẫn kết luận hiện tại không đúng giới hạn dữ liệu; live vẫn kết luận không có cache purge dù chỉ lấy 5 incident chưa lọc. Kết quả chạy thử được lưu riêng trên máy để phân tích, không coi completed là câu trả lời đúng.
 
 ## 5. Giới hạn
 
